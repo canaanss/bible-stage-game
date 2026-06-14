@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>圣经小剧场大屏计分板</title>
+  <style>
+    :root {
+      --bg: #f7efe2;
+      --ink: #1f2430;
+      --muted: #667085;
+      --panel: rgba(255,255,255,.88);
+      --line: #dfd6c8;
+      --amber: #d97800;
+      --blue: #1265d8;
+      --green: #138a53;
+      --red: #d92d20;
+      --violet: #6941c6;
+      --shadow: 0 18px 42px rgba(59, 39, 14, .14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      background:
+        linear-gradient(130deg, rgba(217, 120, 0, .20), transparent 38%),
+        linear-gradient(315deg, rgba(18, 101, 216, .16), transparent 40%),
+        var(--bg);
+    }
+
+    button, select, input { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 18px 28px;
+      background: rgba(255,255,255,.78);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 15px;
+    }
+
+    .header-note {
+      color: #3b3f49;
+      font-size: 18px;
+      text-align: right;
+      line-height: 1.35;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 18px;
+      padding: 18px;
+      min-height: 0;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(80, 62, 35, .14);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      background: #fff7ea;
+      border: 1px solid var(--line);
+      color: #4b5563;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .badge.strong {
+      background: #e8f1ff;
+      color: #0b4da2;
+      border-color: #b8d4ff;
+      font-weight: 800;
+    }
+
+    .number-wrap {
+      display: grid;
+      grid-template-columns: minmax(180px, 260px) minmax(360px, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .number-card {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      border-radius: 8px;
+      background: #fff8eb;
+      border: 2px solid #ead8bd;
+      min-width: 0;
+    }
+
+    .number-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .number-card strong {
+      display: block;
+      color: var(--amber);
+      font-size: clamp(82px, 8vw, 132px);
+      line-height: .9;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-card {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 8px;
+      background: #f7fbff;
+      border: 2px solid #cce0ff;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .phase {
+      color: var(--blue);
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .timer {
+      align-self: center;
+      text-align: center;
+      font-size: clamp(76px, 10vw, 150px);
+      font-weight: 950;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .progress {
+      height: 18px;
+      width: 100%;
+      min-width: 0;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e5e7eb;
+      border: 1px solid #d0d5dd;
+    }
+
+    .progress > div {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #f2a51a, var(--red));
+      transition: width .25s linear;
+    }
+
+    .current-team {
+      font-size: clamp(30px, 4vw, 56px);
+      line-height: 1.12;
+      font-weight: 900;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr .8fr .8fr;
+      gap: 12px;
+    }
+
+    label {
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    select, input {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 11px;
+      border: 1px solid #cfd4dc;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 48px;
+      border: 1px solid #cfd4dc;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .btn:hover { background: #f9fafb; }
+    .btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .btn.success { background: var(--green); color: white; border-color: var(--green); }
+    .btn.warn { background: var(--amber); color: white; border-color: var(--amber); }
+    .btn.danger { background: var(--red); color: white; border-color: var(--red); }
+    .btn.violet { background: var(--violet); color: white; border-color: var(--violet); }
+    .btn.mini { width: 36px; min-height: 34px; padding: 0; }
+
+    aside {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .scoreboard, .rules, .log {
+      padding: 16px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 21px;
+    }
+
+    .teams {
+      display: grid;
+      gap: 10px;
+    }
+
+    .team {
+      display: grid;
+      grid-template-columns: 13px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 58px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff9ef;
+      border: 1px solid #ead8bd;
+    }
+
+    .dot {
+      width: 13px;
+      height: 42px;
+      border-radius: 99px;
+    }
+
+    .team input {
+      min-height: 34px;
+      font-size: 16px;
+    }
+
+    .score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 34px;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rules-list {
+      display: grid;
+      gap: 9px;
+      color: #565e6d;
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .rules-list b { color: var(--ink); }
+
+    .host-panel {
+      padding: 16px;
+      display: none;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+    }
+
+    .host-panel.show { display: grid; }
+    .host-title { font-size: 18px; font-weight: 900; }
+    .host-scene { font-size: 26px; font-weight: 950; }
+    .host-req { color: var(--muted); font-size: 17px; line-height: 1.4; }
+
+    .details-panel {
+      padding: 16px;
+      display: none;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+    }
+
+    .details-panel.show { display: grid; }
+
+    .detail-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-item {
+      min-height: 92px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff9ef;
+      border: 1px solid #ead8bd;
+      color: #344054;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .detail-ref {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: #e8f1ff;
+      color: #0b4da2;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .detail-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 8px;
+      min-height: 32px;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #cfd4dc;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .log {
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .log-list {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      overflow: auto;
+    }
+
+    .log-item {
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff9ef;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      border: 1px solid #ead8bd;
+    }
+
+    .log-item strong { color: var(--ink); }
+    .c1 { background: #ef4444; }
+    .c2 { background: #3b82f6; }
+    .c3 { background: #22c55e; }
+    .c4 { background: #f59e0b; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { grid-template-rows: auto auto auto; }
+      .number-wrap { grid-template-columns: 1fr; }
+      .fields { grid-template-columns: 1fr; }
+      .buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .detail-list { grid-template-columns: 1fr; }
+      header { align-items: flex-start; flex-direction: column; }
+      .header-note { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>圣经小剧场</h1>
+        <div class="subtitle">线下抽签随机，大屏选择编号，清楚计时计分</div>
+      </div>
+      <div class="header-note">准备 1 分钟 · 表演 2 分钟 · 被猜出加 5 分</div>
+    </header>
+
+    <main class="layout">
+      <section class="stage">
+        <article class="panel hero">
+          <div class="badges">
+            <span class="badge strong" id="roundLabel">第 1 轮</span>
+            <span class="badge" id="teamBadge">当前队伍：第一组</span>
+            <span class="badge" id="categoryBadge">题目编号已选</span>
+          </div>
+
+          <div class="number-wrap">
+            <div class="number-card">
+              <div>
+                <span>抽签编号</span>
+                <strong id="promptNumber">01</strong>
+              </div>
+            </div>
+            <div class="timer-card">
+              <div class="phase" id="phaseLabel">准备时间</div>
+              <div class="timer" id="timer">01:00</div>
+              <div class="progress"><div id="progressBar"></div></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="current-team" id="activeTeamText">第一组准备表演</div>
+            <div class="hint" id="publicHint">请主持人按抽到的纸签编号选择题号；表演内容看主持人 Word 答案表，不在大屏展示。</div>
+          </div>
+        </article>
+
+        <section class="host-panel" id="hostPanel">
+          <div class="host-title">主持人核对</div>
+          <div class="host-scene" id="hostScene"></div>
+          <div class="host-req" id="hostRequirement"></div>
+        </section>
+
+        <section class="details-panel" id="detailsPanel">
+          <div class="host-title">圣经细节核对</div>
+          <div class="detail-list" id="detailList"></div>
+        </section>
+
+        <section class="panel controls">
+          <div class="fields">
+            <label>题号
+              <select id="promptSelect"></select>
+            </label>
+            <label>当前队伍
+              <select id="teamSelect"></select>
+            </label>
+            <label>计时阶段
+              <select id="phaseSelect">
+                <option value="prep">准备 1:00</option>
+                <option value="perform">表演 2:00</option>
+              </select>
+            </label>
+            <label>命中细节
+              <input id="hitInput" type="number" min="0" max="5" step="1" value="0" />
+            </label>
+            <label>笑场次数
+              <input id="laughInput" type="number" min="0" max="20" step="1" value="0" />
+            </label>
+          </div>
+          <div class="buttons">
+            <button class="btn primary" id="prepBtn">准备 1:00</button>
+            <button class="btn violet" id="performBtn">表演 2:00</button>
+            <button class="btn success" id="startBtn">开始</button>
+            <button class="btn" id="pauseBtn">暂停</button>
+            <button class="btn warn" id="resetBtn">重置时间</button>
+            <button class="btn danger" id="scoreBtn">猜中 +5</button>
+            <button class="btn primary" id="hitPlusBtn">细节 +1</button>
+            <button class="btn warn" id="laughPlusBtn">笑场 +1</button>
+            <button class="btn success" id="settleBtn">细节结算</button>
+            <button class="btn" id="prevBtn">上一题</button>
+            <button class="btn" id="nextBtn">下一题</button>
+            <button class="btn" id="hostToggleBtn">主持人答案</button>
+            <button class="btn warn" id="detailsToggleBtn">显示细节</button>
+            <button class="btn" id="newRoundBtn">下一轮</button>
+          </div>
+        </section>
+      </section>
+
+      <aside>
+        <section class="panel scoreboard">
+          <h2>队伍计分</h2>
+          <div class="teams" id="teams"></div>
+        </section>
+
+        <section class="panel rules">
+          <h2>现场规则</h2>
+          <div class="rules-list">
+            <div><b>抽题：</b>每队线下抽一张编号签，主持人在大屏选择同一编号。</div>
+            <div><b>准备：</b>每队 1 分钟，只给本队看纸签内容。</div>
+            <div><b>表演：</b>每队 2 分钟，不能说出答案里的关键名称。</div>
+            <div><b>猜中：</b>其他队伍看出演的是什么，表演队伍 +5 分。</div>
+            <div><b>命中细节：</b>每个圣经细节 +4 分，最多 5 个细节。</div>
+            <div><b>笑场扣分：</b>每次笑场 -2 分，从细节得分里扣除。</div>
+            <div><b>主持人：</b>答案表可打印，网页“主持人答案”按钮只建议自己核对时短暂打开。</div>
+          </div>
+        </section>
+
+        <section class="panel log">
+          <h2>回合记录</h2>
+          <div class="log-list" id="logList"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const prompts = [
+      {number:1,category:"创世记",scene:"挪亚方舟正在接动物上船",requirement:"必须有人扮演方舟、雨水和至少两种动物。"},
+      {number:2,category:"出埃及记",scene:"摩西带领众人过红海",requirement:"必须表现海水分开、百姓通过和追兵停住。"},
+      {number:3,category:"撒母耳记",scene:"大卫面对歌利亚",requirement:"必须出现甩石、巨人倒下和众人惊讶三个瞬间。"},
+      {number:4,category:"福音书",scene:"耶稣降生在马槽旁",requirement:"必须有人扮演马槽、牧羊人和远方来客。"},
+      {number:5,category:"福音书",scene:"五饼二鱼分给众人",requirement:"必须表现从很少变成足够众人分享。"},
+      {number:6,category:"路加福音",scene:"好撒玛利亚人帮助受伤的人",requirement:"必须表现路过、停下、包扎和扶起。"},
+      {number:7,category:"路加福音",scene:"浪子回头被父亲迎接",requirement:"必须出现离开、醒悟、回家和拥抱前的停格。"},
+      {number:8,category:"但以理书",scene:"但以理在狮子坑中平安站立",requirement:"至少两个人扮演狮子，但动作必须安全。"},
+      {number:9,category:"但以理书",scene:"三人在火窑中行走",requirement:"必须有人扮演火焰，动作要表现平安而不是混乱。"},
+      {number:10,category:"约拿书",scene:"约拿被大鱼吞下又被吐出",requirement:"必须表现逃避、风浪、大鱼和重新出发。"},
+      {number:11,category:"约书亚记",scene:"耶利哥城墙倒塌",requirement:"必须表现绕城、号角、城墙和倒塌，动作要安全。"},
+      {number:12,category:"士师记",scene:"基甸用火把和号角带队得胜",requirement:"必须有人扮演火把、号角和突然被惊动的营地。"},
+      {number:13,category:"福音书",scene:"彼得在水面上走向耶稣",requirement:"必须表现风浪、信心、害怕和被拉住。"},
+      {number:14,category:"福音书",scene:"耶稣平静风浪",requirement:"必须有人扮演船、风浪和突然安静的海面。"},
+      {number:15,category:"使徒行传",scene:"五旬节众人被圣灵充满",requirement:"必须表现火焰般的舌头、惊奇和勇敢分享。"},
+      {number:16,category:"启示录",scene:"新天新地的欢庆场景",requirement:"必须表现眼泪被擦去、光明和众人喜乐。"},
+      {number:17,category:"约翰福音",scene:"拉撒路从坟墓里出来",requirement:"必须表现坟墓、呼喊、裹布和众人惊讶。"},
+      {number:18,category:"路加福音",scene:"撒该爬上树看耶稣",requirement:"必须表现人群、树上观看、耶稣停下和接待。"},
+      {number:19,category:"约翰福音",scene:"耶稣给门徒洗脚",requirement:"必须表现脱外衣、倒水、洗脚和彼得的反应。"},
+      {number:20,category:"使徒行传",scene:"保罗和西拉在监狱中赞美",requirement:"必须表现锁链、祷告唱诗、地震和门打开。"}
+    ];
+
+    const promptDetails = [
+      [{text:"挪亚建造或预备方舟",ref:"创 6:14-22"}, {text:"动物成对进入方舟",ref:"创 7:8-9"}, {text:"洪水或大雨出现",ref:"创 7:11-12"}, {text:"方舟在水上漂浮",ref:"创 7:17-18"}, {text:"最后出现平安或盼望的记号",ref:"创 8:11"}],
+      [{text:"摩西举杖或伸手",ref:"出 14:16"}, {text:"红海向两边分开",ref:"出 14:21"}, {text:"以色列人从干地通过",ref:"出 14:22"}, {text:"埃及追兵在后面追赶",ref:"出 14:23"}, {text:"海水合拢或追兵被阻止",ref:"出 14:26-28"}],
+      [{text:"大卫年轻或身形较小",ref:"撒上 17:33"}, {text:"歌利亚高大威猛",ref:"撒上 17:4-7"}, {text:"大卫使用机弦和石子",ref:"撒上 17:40"}, {text:"石子击中额头",ref:"撒上 17:49"}, {text:"歌利亚倒下，众人震惊",ref:"撒上 17:49-51"}],
+      [{text:"马利亚和约瑟出现",ref:"路 2:4-5"}, {text:"婴孩在马槽里",ref:"路 2:7"}, {text:"牧羊人前来敬拜",ref:"路 2:15-16"}, {text:"天使报好消息",ref:"路 2:9-14"}, {text:"东方博士或礼物出现",ref:"太 2:10-11"}],
+      [{text:"只有五个饼和两条鱼",ref:"约 6:9"}, {text:"众人很多并且需要食物",ref:"约 6:5-7"}, {text:"耶稣祝谢或擘开",ref:"约 6:11"}, {text:"门徒分给众人",ref:"太 14:19"}, {text:"吃饱后还有剩余",ref:"约 6:12-13"}],
+      [{text:"有人在路上受伤",ref:"路 10:30"}, {text:"有人路过却没有帮助",ref:"路 10:31-32"}, {text:"撒玛利亚人停下来",ref:"路 10:33"}, {text:"包扎伤口或扶上牲口",ref:"路 10:34"}, {text:"带到店里继续照顾",ref:"路 10:34-35"}],
+      [{text:"小儿子离家远去",ref:"路 15:12-13"}, {text:"钱财耗尽或落魄",ref:"路 15:14-16"}, {text:"浪子醒悟决定回家",ref:"路 15:17-20"}, {text:"父亲远远看见并跑去迎接",ref:"路 15:20"}, {text:"穿袍、戴戒指或摆宴席",ref:"路 15:22-24"}],
+      [{text:"但以理坚持祷告",ref:"但 6:10"}, {text:"被丢进狮子坑",ref:"但 6:16"}, {text:"狮子在旁边但不伤害他",ref:"但 6:22"}, {text:"神保护但以理",ref:"但 6:22"}, {text:"王第二天看见他平安",ref:"但 6:19-23"}],
+      [{text:"三人不拜金像",ref:"但 3:12"}, {text:"被丢进烈火窑",ref:"但 3:20-21"}, {text:"火焰很猛烈",ref:"但 3:22"}, {text:"火中有第四位同行",ref:"但 3:25"}, {text:"三人出来身上没有火燎气味",ref:"但 3:27"}],
+      [{text:"约拿逃避神的吩咐",ref:"拿 1:1-3"}, {text:"海上起大风浪",ref:"拿 1:4"}, {text:"约拿被抛入海中",ref:"拿 1:15"}, {text:"大鱼吞下约拿",ref:"拿 1:17"}, {text:"约拿被吐出后重新出发",ref:"拿 2:10, 3:3"}],
+      [{text:"百姓绕耶利哥城行走",ref:"书 6:3"}, {text:"祭司吹号角",ref:"书 6:4"}, {text:"第七日绕城七次",ref:"书 6:15"}, {text:"百姓大声呼喊",ref:"书 6:20"}, {text:"城墙倒塌",ref:"书 6:20"}],
+      [{text:"基甸带少数人出战",ref:"士 7:7"}, {text:"手里有号角",ref:"士 7:16"}, {text:"瓶中藏着火把",ref:"士 7:16"}, {text:"打破瓶子并吹角",ref:"士 7:19-20"}, {text:"敌营惊慌混乱",ref:"士 7:21-22"}],
+      [{text:"门徒在船上遇见风浪",ref:"太 14:24"}, {text:"耶稣在水面上行走",ref:"太 14:25"}, {text:"彼得走出船",ref:"太 14:29"}, {text:"彼得看见风浪就害怕下沉",ref:"太 14:30"}, {text:"耶稣伸手拉住彼得",ref:"太 14:31"}],
+      [{text:"门徒在船上遇到大风浪",ref:"可 4:37"}, {text:"耶稣在船上睡着",ref:"可 4:38"}, {text:"门徒害怕叫醒耶稣",ref:"可 4:38"}, {text:"耶稣斥责风和海",ref:"可 4:39"}, {text:"风浪立刻平静",ref:"可 4:39"}],
+      [{text:"门徒聚集在一处",ref:"徒 2:1"}, {text:"有大风响声",ref:"徒 2:2"}, {text:"火焰般的舌头显现",ref:"徒 2:3"}, {text:"众人被圣灵充满",ref:"徒 2:4"}, {text:"开始勇敢传讲神的大作为",ref:"徒 2:11"}],
+      [{text:"新天新地出现",ref:"启 21:1"}, {text:"神与人同住",ref:"启 21:3"}, {text:"眼泪被擦去",ref:"启 21:4"}, {text:"不再有死亡悲哀疼痛",ref:"启 21:4"}, {text:"光明和敬拜的喜乐",ref:"启 21:23-24"}],
+      [{text:"拉撒路已经在坟墓里",ref:"约 11:17"}, {text:"马大或马利亚迎见耶稣",ref:"约 11:20, 32"}, {text:"耶稣哭了",ref:"约 11:35"}, {text:"耶稣呼喊拉撒路出来",ref:"约 11:43"}, {text:"拉撒路裹着布出来",ref:"约 11:44"}],
+      [{text:"撒该是税吏长并且富足",ref:"路 19:2"}, {text:"撒该身量矮小看不见",ref:"路 19:3"}, {text:"撒该爬上树",ref:"路 19:4"}, {text:"耶稣叫撒该下来",ref:"路 19:5"}, {text:"撒该欢喜接待耶稣",ref:"路 19:6"}],
+      [{text:"耶稣离席脱了外衣",ref:"约 13:4"}, {text:"拿手巾束腰",ref:"约 13:4"}, {text:"把水倒在盆里",ref:"约 13:5"}, {text:"给门徒洗脚并擦干",ref:"约 13:5"}, {text:"彼得一开始不愿意",ref:"约 13:6-8"}],
+      [{text:"保罗和西拉被关进监牢",ref:"徒 16:23-24"}, {text:"半夜祷告唱诗赞美神",ref:"徒 16:25"}, {text:"众囚犯侧耳而听",ref:"徒 16:25"}, {text:"忽然大地震，监门全开",ref:"徒 16:26"}, {text:"锁链都松开了",ref:"徒 16:26"}]
+    ];
+    const teams = [
+      { name: "第一组", score: 0, color: "c1" },
+      { name: "第二组", score: 0, color: "c2" },
+      { name: "第三组", score: 0, color: "c3" },
+      { name: "第四组", score: 0, color: "c4" }
+    ];
+
+    const phaseDurations = { prep: 60, perform: 120 };
+    const phaseNames = { prep: "准备时间", perform: "表演时间" };
+    let currentIndex = 0;
+    let activeTeam = 0;
+    let phase = "prep";
+    let duration = phaseDurations[phase];
+    let remaining = duration;
+    let timerId = null;
+    let round = 1;
+    let hitCount = 0;
+    let laughCount = 0;
+    let detailsVisible = false;
+
+    const el = (id) => document.getElementById(id);
+    const currentPrompt = () => prompts[currentIndex];
+    const pad2 = (value) => String(value).padStart(2, "0");
+    const formatTime = (seconds) => `${pad2(Math.floor(seconds / 60))}:${pad2(seconds % 60)}`;
+
+    function renderSelectors() {
+      const promptSelect = el("promptSelect");
+      promptSelect.innerHTML = "";
+      prompts.forEach((prompt, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = `${pad2(prompt.number)}`;
+        promptSelect.appendChild(option);
+      });
+      promptSelect.value = currentIndex;
+
+      const teamSelect = el("teamSelect");
+      teamSelect.innerHTML = "";
+      teams.forEach((team, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = team.name;
+        teamSelect.appendChild(option);
+      });
+      teamSelect.value = activeTeam;
+      el("phaseSelect").value = phase;
+    }
+
+    function renderTeams() {
+      const wrap = el("teams");
+      wrap.innerHTML = "";
+      teams.forEach((team, index) => {
+        const row = document.createElement("div");
+        row.className = "team";
+        row.innerHTML = `
+          <span class="dot ${team.color}"></span>
+          <input value="${escapeHtml(team.name)}" data-team-name="${index}" aria-label="队伍名称">
+          <span class="score">
+            <button class="btn mini" data-minus="${index}">-</button>
+            <span>${team.score}</span>
+            <button class="btn mini" data-plus="${index}">+</button>
+          </span>
+        `;
+        wrap.appendChild(row);
+      });
+
+      wrap.querySelectorAll("[data-team-name]").forEach((input) => {
+        input.addEventListener("change", (event) => {
+          teams[Number(event.target.dataset.teamName)].name = event.target.value || "未命名队伍";
+          render();
+        });
+      });
+      wrap.querySelectorAll("[data-minus]").forEach((button) => {
+        button.addEventListener("click", () => {
+          teams[Number(button.dataset.minus)].score -= 1;
+          render();
+        });
+      });
+      wrap.querySelectorAll("[data-plus]").forEach((button) => {
+        button.addEventListener("click", () => {
+          teams[Number(button.dataset.plus)].score += 1;
+          render();
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function setPhase(nextPhase) {
+      stopTimer();
+      phase = nextPhase;
+      duration = phaseDurations[phase];
+      remaining = duration;
+      render();
+    }
+
+    function render() {
+      const prompt = currentPrompt();
+      renderSelectors();
+      renderTeams();
+      el("roundLabel").textContent = `第 ${round} 轮`;
+      el("teamBadge").textContent = `当前队伍：${teams[activeTeam].name}`;
+      el("categoryBadge").textContent = `题号 ${pad2(prompt.number)}`;
+      el("promptNumber").textContent = pad2(prompt.number);
+      el("phaseLabel").textContent = phaseNames[phase];
+      el("timer").textContent = formatTime(remaining);
+      el("activeTeamText").textContent = `${teams[activeTeam].name}${phase === "prep" ? "准备表演" : "正在表演"}`;
+      el("hostScene").textContent = `${pad2(prompt.number)} · ${prompt.scene}`;
+      el("hostRequirement").textContent = `类别：${prompt.category}｜要求：${prompt.requirement}`;
+      el("hitInput").value = hitCount;
+      el("laughInput").value = laughCount;
+      el("publicHint").textContent = `本轮细节得分：${hitCount} × 4 - ${laughCount} × 2 = ${calculateDetailScore()} 分；被猜中可另外 +5 分。`;
+      renderDetails();
+      const pct = duration ? Math.max(0, Math.min(100, (remaining / duration) * 100)) : 0;
+      el("progressBar").style.width = `${pct}%`;
+    }
+
+    function renderDetails() {
+      const panel = el("detailsPanel");
+      const list = el("detailList");
+      const details = promptDetails[currentIndex] || [];
+      panel.classList.toggle("show", detailsVisible);
+      el("detailsToggleBtn").textContent = detailsVisible ? "隐藏细节" : "显示细节";
+      list.innerHTML = "";
+      details.forEach((detail, index) => {
+        const itemText = typeof detail === "string" ? detail : detail.text;
+        const itemRef = typeof detail === "string" ? "" : detail.ref;
+        const item = document.createElement("div");
+        item.className = "detail-item";
+        item.innerHTML = `
+          <div>${index + 1}. ${escapeHtml(itemText)}</div>
+          ${itemRef ? `<div class="detail-ref">${escapeHtml(itemRef)}</div>` : ""}
+          ${itemRef ? `<a class="detail-link" href="${scriptureSearchUrl(itemRef)}" target="_blank" rel="noreferrer">查经文</a>` : ""}
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function scriptureSearchUrl(ref) {
+      return `https://www.bing.com/search?q=${encodeURIComponent(`圣经 ${ref} 经文`)}`;
+    }
+
+    function startTimer() {
+      stopTimer();
+      timerId = window.setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          remaining = 0;
+          stopTimer();
+        }
+        render();
+      }, 1000);
+      render();
+    }
+
+    function stopTimer() {
+      if (timerId) window.clearInterval(timerId);
+      timerId = null;
+    }
+
+    function resetTimer() {
+      stopTimer();
+      duration = phaseDurations[phase];
+      remaining = duration;
+      render();
+    }
+
+    function resetRoundCounters() {
+      hitCount = 0;
+      laughCount = 0;
+      detailsVisible = false;
+    }
+
+    function clampNumber(value, min, max) {
+      return Math.max(min, Math.min(max, Number(value) || 0));
+    }
+
+    function calculateDetailScore() {
+      return Math.max(0, hitCount * 4 - laughCount * 2);
+    }
+
+    function scoreSuccess() {
+      teams[activeTeam].score += 5;
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.innerHTML = `<strong>${escapeHtml(teams[activeTeam].name)}</strong> 第 ${round} 轮，题号 ${pad2(currentPrompt().number)} 被猜中，+5 分`;
+      el("logList").prepend(item);
+      render();
+    }
+
+    function settleDetails() {
+      const delta = calculateDetailScore();
+      teams[activeTeam].score += delta;
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.innerHTML = `<strong>${escapeHtml(teams[activeTeam].name)}</strong> 第 ${round} 轮，题号 ${pad2(currentPrompt().number)}：命中细节 ${hitCount}/5，笑场 ${laughCount} 次，细节得分 +${delta}`;
+      el("logList").prepend(item);
+      hitCount = 0;
+      laughCount = 0;
+      render();
+    }
+
+    el("promptSelect").addEventListener("change", (event) => {
+      currentIndex = Number(event.target.value);
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("teamSelect").addEventListener("change", (event) => {
+      activeTeam = Number(event.target.value);
+      render();
+    });
+    el("phaseSelect").addEventListener("change", (event) => setPhase(event.target.value));
+    el("prepBtn").addEventListener("click", () => setPhase("prep"));
+    el("performBtn").addEventListener("click", () => setPhase("perform"));
+    el("startBtn").addEventListener("click", startTimer);
+    el("pauseBtn").addEventListener("click", stopTimer);
+    el("resetBtn").addEventListener("click", resetTimer);
+    el("scoreBtn").addEventListener("click", scoreSuccess);
+    el("hitPlusBtn").addEventListener("click", () => {
+      hitCount = clampNumber(hitCount + 1, 0, 5);
+      render();
+    });
+    el("laughPlusBtn").addEventListener("click", () => {
+      laughCount = clampNumber(laughCount + 1, 0, 20);
+      render();
+    });
+    el("settleBtn").addEventListener("click", settleDetails);
+    el("hitInput").addEventListener("input", (event) => {
+      hitCount = clampNumber(event.target.value, 0, 5);
+      render();
+    });
+    el("laughInput").addEventListener("input", (event) => {
+      laughCount = clampNumber(event.target.value, 0, 20);
+      render();
+    });
+    el("prevBtn").addEventListener("click", () => {
+      currentIndex = (currentIndex - 1 + prompts.length) % prompts.length;
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("nextBtn").addEventListener("click", () => {
+      currentIndex = (currentIndex + 1) % prompts.length;
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("hostToggleBtn").addEventListener("click", () => {
+      el("hostPanel").classList.toggle("show");
+    });
+    el("detailsToggleBtn").addEventListener("click", () => {
+      detailsVisible = !detailsVisible;
+      render();
+    });
+    el("newRoundBtn").addEventListener("click", () => {
+      round += 1;
+      activeTeam = (activeTeam + 1) % teams.length;
+      resetRoundCounters();
+      setPhase("prep");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        timerId ? stopTimer() : startTimer();
+      }
+      if (event.key === "ArrowRight") {
+        currentIndex = (currentIndex + 1) % prompts.length;
+        resetRoundCounters();
+        resetTimer();
+      }
+      if (event.key === "ArrowLeft") {
+        currentIndex = (currentIndex - 1 + prompts.length) % prompts.length;
+        resetRoundCounters();
+        resetTimer();
+      }
+      if (event.key.toLowerCase() === "p") setPhase("prep");
+      if (event.key.toLowerCase() === "b") setPhase("perform");
+      if (event.key.toLowerCase() === "s") scoreSuccess();
+      if (event.key.toLowerCase() === "d") {
+        detailsVisible = !detailsVisible;
+        render();
+      }
+      if (event.key.toLowerCase() === "h") {
+        hitCount = clampNumber(hitCount + 1, 0, 5);
+        render();
+      }
+      if (event.key.toLowerCase() === "l") {
+        laughCount = clampNumber(laughCount + 1, 0, 20);
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
