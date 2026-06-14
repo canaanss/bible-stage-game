@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>圣经小剧场大屏计分板</title>
+  <style>
+    :root {
+      --bg: #f7efe2;
+      --ink: #1f2430;
+      --muted: #667085;
+      --panel: rgba(255,255,255,.88);
+      --line: #dfd6c8;
+      --amber: #d97800;
+      --blue: #1265d8;
+      --green: #138a53;
+      --red: #d92d20;
+      --violet: #6941c6;
+      --shadow: 0 18px 42px rgba(59, 39, 14, .14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      background:
+        linear-gradient(130deg, rgba(217, 120, 0, .20), transparent 38%),
+        linear-gradient(315deg, rgba(18, 101, 216, .16), transparent 40%),
+        var(--bg);
+    }
+
+    button, select, input { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 18px 28px;
+      background: rgba(255,255,255,.78);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 15px;
+    }
+
+    .header-note {
+      color: #3b3f49;
+      font-size: 18px;
+      text-align: right;
+      line-height: 1.35;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 18px;
+      padding: 18px;
+      min-height: 0;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(80, 62, 35, .14);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      background: #fff7ea;
+      border: 1px solid var(--line);
+      color: #4b5563;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .badge.strong {
+      background: #e8f1ff;
+      color: #0b4da2;
+      border-color: #b8d4ff;
+      font-weight: 800;
+    }
+
+    .number-wrap {
+      display: grid;
+      grid-template-columns: minmax(180px, 260px) minmax(360px, 1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .number-card {
+      display: grid;
+      place-items: center;
+      min-height: 220px;
+      border-radius: 8px;
+      background: #fff8eb;
+      border: 2px solid #ead8bd;
+      min-width: 0;
+    }
+
+    .number-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .number-card strong {
+      display: block;
+      color: var(--amber);
+      font-size: clamp(82px, 8vw, 132px);
+      line-height: .9;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-card {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 8px;
+      background: #f7fbff;
+      border: 2px solid #cce0ff;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .phase {
+      color: var(--blue);
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .timer {
+      align-self: center;
+      text-align: center;
+      font-size: clamp(76px, 10vw, 150px);
+      font-weight: 950;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .progress {
+      height: 18px;
+      width: 100%;
+      min-width: 0;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e5e7eb;
+      border: 1px solid #d0d5dd;
+    }
+
+    .progress > div {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #f2a51a, var(--red));
+      transition: width .25s linear;
+    }
+
+    .current-team {
+      font-size: clamp(30px, 4vw, 56px);
+      line-height: 1.12;
+      font-weight: 900;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr .8fr .8fr;
+      gap: 12px;
+    }
+
+    label {
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    select, input {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 11px;
+      border: 1px solid #cfd4dc;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 48px;
+      border: 1px solid #cfd4dc;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .btn:hover { background: #f9fafb; }
+    .btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .btn.success { background: var(--green); color: white; border-color: var(--green); }
+    .btn.warn { background: var(--amber); color: white; border-color: var(--amber); }
+    .btn.danger { background: var(--red); color: white; border-color: var(--red); }
+    .btn.violet { background: var(--violet); color: white; border-color: var(--violet); }
+    .btn.mini { width: 36px; min-height: 34px; padding: 0; }
+
+    aside {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .scoreboard, .rules, .log {
+      padding: 16px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 21px;
+    }
+
+    .teams {
+      display: grid;
+      gap: 10px;
+    }
+
+    .team {
+      display: grid;
+      grid-template-columns: 13px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 58px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff9ef;
+      border: 1px solid #ead8bd;
+    }
+
+    .dot {
+      width: 13px;
+      height: 42px;
+      border-radius: 99px;
+    }
+
+    .team input {
+      min-height: 34px;
+      font-size: 16px;
+    }
+
+    .score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 34px;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rules-list {
+      display: grid;
+      gap: 9px;
+      color: #565e6d;
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .rules-list b { color: var(--ink); }
+
+    .host-panel {
+      padding: 16px;
+      display: none;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+    }
+
+    .host-panel.show { display: grid; }
+    .host-title { font-size: 18px; font-weight: 900; }
+    .host-scene { font-size: 26px; font-weight: 950; }
+    .host-req { color: var(--muted); font-size: 17px; line-height: 1.4; }
+
+    .log {
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .log-list {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      overflow: auto;
+    }
+
+    .log-item {
+      padding: 10px;
+      border-radius: 8px;
+      background: #fff9ef;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      border: 1px solid #ead8bd;
+    }
+
+    .log-item strong { color: var(--ink); }
+    .c1 { background: #ef4444; }
+    .c2 { background: #3b82f6; }
+    .c3 { background: #22c55e; }
+    .c4 { background: #f59e0b; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { grid-template-rows: auto auto auto; }
+      .number-wrap { grid-template-columns: 1fr; }
+      .fields { grid-template-columns: 1fr; }
+      .buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      header { align-items: flex-start; flex-direction: column; }
+      .header-note { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>圣经小剧场</h1>
+        <div class="subtitle">线下抽签随机，大屏选择编号，清楚计时计分</div>
+      </div>
+      <div class="header-note">准备 1 分钟 · 表演 2 分钟 · 被猜出加 5 分</div>
+    </header>
+
+    <main class="layout">
+      <section class="stage">
+        <article class="panel hero">
+          <div class="badges">
+            <span class="badge strong" id="roundLabel">第 1 轮</span>
+            <span class="badge" id="teamBadge">当前队伍：第一组</span>
+            <span class="badge" id="categoryBadge">题目编号已选</span>
+          </div>
+
+          <div class="number-wrap">
+            <div class="number-card">
+              <div>
+                <span>抽签编号</span>
+                <strong id="promptNumber">01</strong>
+              </div>
+            </div>
+            <div class="timer-card">
+              <div class="phase" id="phaseLabel">准备时间</div>
+              <div class="timer" id="timer">01:00</div>
+              <div class="progress"><div id="progressBar"></div></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="current-team" id="activeTeamText">第一组准备表演</div>
+            <div class="hint" id="publicHint">请主持人按抽到的纸签编号选择题号；表演内容看主持人 Word 答案表，不在大屏展示。</div>
+          </div>
+        </article>
+
+        <section class="host-panel" id="hostPanel">
+          <div class="host-title">主持人核对</div>
+          <div class="host-scene" id="hostScene"></div>
+          <div class="host-req" id="hostRequirement"></div>
+        </section>
+
+        <section class="panel controls">
+          <div class="fields">
+            <label>题号
+              <select id="promptSelect"></select>
+            </label>
+            <label>当前队伍
+              <select id="teamSelect"></select>
+            </label>
+            <label>计时阶段
+              <select id="phaseSelect">
+                <option value="prep">准备 1:00</option>
+                <option value="perform">表演 2:00</option>
+              </select>
+            </label>
+            <label>命中细节
+              <input id="hitInput" type="number" min="0" max="5" step="1" value="0" />
+            </label>
+            <label>笑场次数
+              <input id="laughInput" type="number" min="0" max="20" step="1" value="0" />
+            </label>
+          </div>
+          <div class="buttons">
+            <button class="btn primary" id="prepBtn">准备 1:00</button>
+            <button class="btn violet" id="performBtn">表演 2:00</button>
+            <button class="btn success" id="startBtn">开始</button>
+            <button class="btn" id="pauseBtn">暂停</button>
+            <button class="btn warn" id="resetBtn">重置时间</button>
+            <button class="btn danger" id="scoreBtn">猜中 +5</button>
+            <button class="btn primary" id="hitPlusBtn">细节 +1</button>
+            <button class="btn warn" id="laughPlusBtn">笑场 +1</button>
+            <button class="btn success" id="settleBtn">细节结算</button>
+            <button class="btn" id="prevBtn">上一题</button>
+            <button class="btn" id="nextBtn">下一题</button>
+            <button class="btn" id="hostToggleBtn">主持人答案</button>
+            <button class="btn" id="newRoundBtn">下一轮</button>
+          </div>
+        </section>
+      </section>
+
+      <aside>
+        <section class="panel scoreboard">
+          <h2>队伍计分</h2>
+          <div class="teams" id="teams"></div>
+        </section>
+
+        <section class="panel rules">
+          <h2>现场规则</h2>
+          <div class="rules-list">
+            <div><b>抽题：</b>每队线下抽一张编号签，主持人在大屏选择同一编号。</div>
+            <div><b>准备：</b>每队 1 分钟，只给本队看纸签内容。</div>
+            <div><b>表演：</b>每队 2 分钟，不能说出答案里的关键名称。</div>
+            <div><b>猜中：</b>其他队伍看出演的是什么，表演队伍 +5 分。</div>
+            <div><b>命中细节：</b>每个圣经细节 +4 分，最多 5 个细节。</div>
+            <div><b>笑场扣分：</b>每次笑场 -2 分，从细节得分里扣除。</div>
+            <div><b>主持人：</b>答案表可打印，网页“主持人答案”按钮只建议自己核对时短暂打开。</div>
+          </div>
+        </section>
+
+        <section class="panel log">
+          <h2>回合记录</h2>
+          <div class="log-list" id="logList"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const prompts = [
+      {number:1,category:"创世记",scene:"挪亚方舟正在接动物上船",requirement:"必须有人扮演方舟、雨水和至少两种动物。"},
+      {number:2,category:"出埃及记",scene:"摩西带领众人过红海",requirement:"必须表现海水分开、百姓通过和追兵停住。"},
+      {number:3,category:"撒母耳记",scene:"大卫面对歌利亚",requirement:"必须出现甩石、巨人倒下和众人惊讶三个瞬间。"},
+      {number:4,category:"福音书",scene:"耶稣降生在马槽旁",requirement:"必须有人扮演马槽、牧羊人和远方来客。"},
+      {number:5,category:"福音书",scene:"五饼二鱼分给众人",requirement:"必须表现从很少变成足够众人分享。"},
+      {number:6,category:"路加福音",scene:"好撒玛利亚人帮助受伤的人",requirement:"必须表现路过、停下、包扎和扶起。"},
+      {number:7,category:"路加福音",scene:"浪子回头被父亲迎接",requirement:"必须出现离开、醒悟、回家和拥抱前的停格。"},
+      {number:8,category:"但以理书",scene:"但以理在狮子坑中平安站立",requirement:"至少两个人扮演狮子，但动作必须安全。"},
+      {number:9,category:"但以理书",scene:"三人在火窑中行走",requirement:"必须有人扮演火焰，动作要表现平安而不是混乱。"},
+      {number:10,category:"约拿书",scene:"约拿被大鱼吞下又被吐出",requirement:"必须表现逃避、风浪、大鱼和重新出发。"},
+      {number:11,category:"约书亚记",scene:"耶利哥城墙倒塌",requirement:"必须表现绕城、号角、城墙和倒塌，动作要安全。"},
+      {number:12,category:"士师记",scene:"基甸用火把和号角带队得胜",requirement:"必须有人扮演火把、号角和突然被惊动的营地。"},
+      {number:13,category:"福音书",scene:"彼得在水面上走向耶稣",requirement:"必须表现风浪、信心、害怕和被拉住。"},
+      {number:14,category:"福音书",scene:"耶稣平静风浪",requirement:"必须有人扮演船、风浪和突然安静的海面。"},
+      {number:15,category:"使徒行传",scene:"五旬节众人被圣灵充满",requirement:"必须表现火焰般的舌头、惊奇和勇敢分享。"},
+      {number:16,category:"启示录",scene:"新天新地的欢庆场景",requirement:"必须表现眼泪被擦去、光明和众人喜乐。"},
+      {number:17,category:"约翰福音",scene:"拉撒路从坟墓里出来",requirement:"必须表现坟墓、呼喊、裹布和众人惊讶。"},
+      {number:18,category:"路加福音",scene:"撒该爬上树看耶稣",requirement:"必须表现人群、树上观看、耶稣停下和接待。"},
+      {number:19,category:"约翰福音",scene:"耶稣给门徒洗脚",requirement:"必须表现脱外衣、倒水、洗脚和彼得的反应。"},
+      {number:20,category:"使徒行传",scene:"保罗和西拉在监狱中赞美",requirement:"必须表现锁链、祷告唱诗、地震和门打开。"}
+    ];
+    const teams = [
+      { name: "第一组", score: 0, color: "c1" },
+      { name: "第二组", score: 0, color: "c2" },
+      { name: "第三组", score: 0, color: "c3" },
+      { name: "第四组", score: 0, color: "c4" }
+    ];
+
+    const phaseDurations = { prep: 60, perform: 120 };
+    const phaseNames = { prep: "准备时间", perform: "表演时间" };
+    let currentIndex = 0;
+    let activeTeam = 0;
+    let phase = "prep";
+    let duration = phaseDurations[phase];
+    let remaining = duration;
+    let timerId = null;
+    let round = 1;
+    let hitCount = 0;
+    let laughCount = 0;
+
+    const el = (id) => document.getElementById(id);
+    const currentPrompt = () => prompts[currentIndex];
+    const pad2 = (value) => String(value).padStart(2, "0");
+    const formatTime = (seconds) => `${pad2(Math.floor(seconds / 60))}:${pad2(seconds % 60)}`;
+
+    function renderSelectors() {
+      const promptSelect = el("promptSelect");
+      promptSelect.innerHTML = "";
+      prompts.forEach((prompt, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = `${pad2(prompt.number)}`;
+        promptSelect.appendChild(option);
+      });
+      promptSelect.value = currentIndex;
+
+      const teamSelect = el("teamSelect");
+      teamSelect.innerHTML = "";
+      teams.forEach((team, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = team.name;
+        teamSelect.appendChild(option);
+      });
+      teamSelect.value = activeTeam;
+      el("phaseSelect").value = phase;
+    }
+
+    function renderTeams() {
+      const wrap = el("teams");
+      wrap.innerHTML = "";
+      teams.forEach((team, index) => {
+        const row = document.createElement("div");
+        row.className = "team";
+        row.innerHTML = `
+          <span class="dot ${team.color}"></span>
+          <input value="${escapeHtml(team.name)}" data-team-name="${index}" aria-label="队伍名称">
+          <span class="score">
+            <button class="btn mini" data-minus="${index}">-</button>
+            <span>${team.score}</span>
+            <button class="btn mini" data-plus="${index}">+</button>
+          </span>
+        `;
+        wrap.appendChild(row);
+      });
+
+      wrap.querySelectorAll("[data-team-name]").forEach((input) => {
+        input.addEventListener("change", (event) => {
+          teams[Number(event.target.dataset.teamName)].name = event.target.value || "未命名队伍";
+          render();
+        });
+      });
+      wrap.querySelectorAll("[data-minus]").forEach((button) => {
+        button.addEventListener("click", () => {
+          teams[Number(button.dataset.minus)].score -= 1;
+          render();
+        });
+      });
+      wrap.querySelectorAll("[data-plus]").forEach((button) => {
+        button.addEventListener("click", () => {
+          teams[Number(button.dataset.plus)].score += 1;
+          render();
+        });
+      });
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function setPhase(nextPhase) {
+      stopTimer();
+      phase = nextPhase;
+      duration = phaseDurations[phase];
+      remaining = duration;
+      render();
+    }
+
+    function render() {
+      const prompt = currentPrompt();
+      renderSelectors();
+      renderTeams();
+      el("roundLabel").textContent = `第 ${round} 轮`;
+      el("teamBadge").textContent = `当前队伍：${teams[activeTeam].name}`;
+      el("categoryBadge").textContent = `题号 ${pad2(prompt.number)}`;
+      el("promptNumber").textContent = pad2(prompt.number);
+      el("phaseLabel").textContent = phaseNames[phase];
+      el("timer").textContent = formatTime(remaining);
+      el("activeTeamText").textContent = `${teams[activeTeam].name}${phase === "prep" ? "准备表演" : "正在表演"}`;
+      el("hostScene").textContent = `${pad2(prompt.number)} · ${prompt.scene}`;
+      el("hostRequirement").textContent = `类别：${prompt.category}｜要求：${prompt.requirement}`;
+      el("hitInput").value = hitCount;
+      el("laughInput").value = laughCount;
+      el("publicHint").textContent = `本轮细节得分：${hitCount} × 4 - ${laughCount} × 2 = ${calculateDetailScore()} 分；被猜中可另外 +5 分。`;
+      const pct = duration ? Math.max(0, Math.min(100, (remaining / duration) * 100)) : 0;
+      el("progressBar").style.width = `${pct}%`;
+    }
+
+    function startTimer() {
+      stopTimer();
+      timerId = window.setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          remaining = 0;
+          stopTimer();
+        }
+        render();
+      }, 1000);
+      render();
+    }
+
+    function stopTimer() {
+      if (timerId) window.clearInterval(timerId);
+      timerId = null;
+    }
+
+    function resetTimer() {
+      stopTimer();
+      duration = phaseDurations[phase];
+      remaining = duration;
+      render();
+    }
+
+    function resetRoundCounters() {
+      hitCount = 0;
+      laughCount = 0;
+    }
+
+    function clampNumber(value, min, max) {
+      return Math.max(min, Math.min(max, Number(value) || 0));
+    }
+
+    function calculateDetailScore() {
+      return Math.max(0, hitCount * 4 - laughCount * 2);
+    }
+
+    function scoreSuccess() {
+      teams[activeTeam].score += 5;
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.innerHTML = `<strong>${escapeHtml(teams[activeTeam].name)}</strong> 第 ${round} 轮，题号 ${pad2(currentPrompt().number)} 被猜中，+5 分`;
+      el("logList").prepend(item);
+      render();
+    }
+
+    function settleDetails() {
+      const delta = calculateDetailScore();
+      teams[activeTeam].score += delta;
+      const item = document.createElement("div");
+      item.className = "log-item";
+      item.innerHTML = `<strong>${escapeHtml(teams[activeTeam].name)}</strong> 第 ${round} 轮，题号 ${pad2(currentPrompt().number)}：命中细节 ${hitCount}/5，笑场 ${laughCount} 次，细节得分 +${delta}`;
+      el("logList").prepend(item);
+      hitCount = 0;
+      laughCount = 0;
+      render();
+    }
+
+    el("promptSelect").addEventListener("change", (event) => {
+      currentIndex = Number(event.target.value);
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("teamSelect").addEventListener("change", (event) => {
+      activeTeam = Number(event.target.value);
+      render();
+    });
+    el("phaseSelect").addEventListener("change", (event) => setPhase(event.target.value));
+    el("prepBtn").addEventListener("click", () => setPhase("prep"));
+    el("performBtn").addEventListener("click", () => setPhase("perform"));
+    el("startBtn").addEventListener("click", startTimer);
+    el("pauseBtn").addEventListener("click", stopTimer);
+    el("resetBtn").addEventListener("click", resetTimer);
+    el("scoreBtn").addEventListener("click", scoreSuccess);
+    el("hitPlusBtn").addEventListener("click", () => {
+      hitCount = clampNumber(hitCount + 1, 0, 5);
+      render();
+    });
+    el("laughPlusBtn").addEventListener("click", () => {
+      laughCount = clampNumber(laughCount + 1, 0, 20);
+      render();
+    });
+    el("settleBtn").addEventListener("click", settleDetails);
+    el("hitInput").addEventListener("input", (event) => {
+      hitCount = clampNumber(event.target.value, 0, 5);
+      render();
+    });
+    el("laughInput").addEventListener("input", (event) => {
+      laughCount = clampNumber(event.target.value, 0, 20);
+      render();
+    });
+    el("prevBtn").addEventListener("click", () => {
+      currentIndex = (currentIndex - 1 + prompts.length) % prompts.length;
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("nextBtn").addEventListener("click", () => {
+      currentIndex = (currentIndex + 1) % prompts.length;
+      resetRoundCounters();
+      resetTimer();
+    });
+    el("hostToggleBtn").addEventListener("click", () => {
+      el("hostPanel").classList.toggle("show");
+    });
+    el("newRoundBtn").addEventListener("click", () => {
+      round += 1;
+      activeTeam = (activeTeam + 1) % teams.length;
+      resetRoundCounters();
+      setPhase("prep");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault();
+        timerId ? stopTimer() : startTimer();
+      }
+      if (event.key === "ArrowRight") {
+        currentIndex = (currentIndex + 1) % prompts.length;
+        resetRoundCounters();
+        resetTimer();
+      }
+      if (event.key === "ArrowLeft") {
+        currentIndex = (currentIndex - 1 + prompts.length) % prompts.length;
+        resetRoundCounters();
+        resetTimer();
+      }
+      if (event.key.toLowerCase() === "p") setPhase("prep");
+      if (event.key.toLowerCase() === "b") setPhase("perform");
+      if (event.key.toLowerCase() === "s") scoreSuccess();
+      if (event.key.toLowerCase() === "h") {
+        hitCount = clampNumber(hitCount + 1, 0, 5);
+        render();
+      }
+      if (event.key.toLowerCase() === "l") {
+        laughCount = clampNumber(laughCount + 1, 0, 20);
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
